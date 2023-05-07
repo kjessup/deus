@@ -1,52 +1,52 @@
 
+#import aioredis
 import quart
 import quart_cors
 from quart import request, jsonify, send_from_directory
-import contextlib
-import io
+from quart_redis import RedisHandler, get_redis
 import os
 import subprocess
 
 memories = {}
 
 app = quart_cors.cors(quart.Quart(__name__), allow_origin="https://chat.openai.com")
+app.config['REDIS_URI'] = 'redis://localhost:6379/0'
+r = RedisHandler(app)
 
 @app.route('/pub/<path:filename>')
 async def serve_static_file(filename):
-    static_folder = '/tmp'
+    static_folder = './pub'
     return await send_from_directory(static_folder, filename, conditional=True)
 
 @app.route('/memories', methods=['POST'])
 async def create_memory():
     if request.content_type != 'application/json':
         return jsonify({'error': 'Only application/json content type is supported'}), 415
-    
     data = await request.get_json()
     memory_id = data.get('id')
     text = data.get('text')
-
     if not memory_id or not text:
         return jsonify({'error': 'Both "id" and "text" fields are required'}), 400
-
-    if memory_id in memories:
+    redis = get_redis()
+    if await redis.exists(memory_id):
         return jsonify({'error': 'Memory with this id already exists'}), 409
-
-    memories[memory_id] = text
-
+    await redis.set(memory_id, text)
     return jsonify({'id': memory_id}), 201
 
 @app.route('/memories', methods=['GET'])
 async def list_memories():
-    return jsonify(list(memories.keys())), 200
+    redis = get_redis()
+    keys = await redis.keys('*')
+    keys_str = [key.decode('utf-8') for key in keys]
+    return jsonify(keys_str), 200
 
 @app.route('/memories/<memory_id>', methods=['GET'])
 async def get_memory(memory_id):
-    memory = memories.get(memory_id)
-
+    redis = get_redis()
+    memory = await redis.get(memory_id)
     if not memory:
         return jsonify({'error': 'Memory not found'}), 404
-    
-    return jsonify({'id': memory_id, 'text': memory}), 200
+    return jsonify({'id': memory_id, 'text': memory.decode('utf-8')}), 200
 
 def create_virtual_environment():
     venv_path = './venv'
@@ -115,6 +115,8 @@ async def run_script():
     if not language or not code:
         return jsonify({'error': 'Both "language" and "code" fields are required'}), 400
 
+    initial_cwd = os.getcwd()
+    os.chdir('./dwd')
     try:
         if language == "python":
             exit_code, stdout, stderr = run_python(code)
@@ -125,7 +127,10 @@ async def run_script():
         else:
             return jsonify({'error': 'Unsupported language'}), 400
     except Exception as e:
+        os.chdir(initial_cwd)  # Change back to the initial directory if an exception occurs
         return jsonify({'error': f'Error running script: {str(e)}'}), 500
+    finally:
+        os.chdir(initial_cwd)  # Always change back to the initial directory
 
     response = {
         "exitCode": exit_code,
@@ -155,7 +160,6 @@ async def openapi_spec():
         return quart.Response(text, mimetype="text/yaml")
 
 def main():
-    os.chdir('./tmp')
     app.run(debug=False, host="0.0.0.0", port=5004)
 
 if __name__ == "__main__":
