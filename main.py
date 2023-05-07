@@ -126,6 +126,9 @@ async def run_script():
             exit_code, stdout, stderr = run_applescript(code)
         else:
             return jsonify({'error': 'Unsupported language'}), 400
+    
+        log_message = f'Code: {code}, Exit Code: {exit_code}, Stdout: {stdout}, Stderr: {stderr}'
+        app.logger.info(log_message)
     except Exception as e:
         os.chdir(initial_cwd)  # Change back to the initial directory if an exception occurs
         return jsonify({'error': f'Error running script: {str(e)}'}), 500
