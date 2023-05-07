@@ -140,7 +140,7 @@ components:
       properties:
         description:
           type: string
-          description: A unique identifier for the memory to be searched
+          description: A memory search query
     searchMemoryResponse:
       type: object
       properties:

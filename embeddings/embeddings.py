@@ -4,8 +4,6 @@ import openai
 import numpy as np
 from transformers import AutoTokenizer, AutoModel
 
-openai.api_key = "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"
-
 def get_embeddings(string, method):
     if method == "codebert":
         tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
