@@ -71,7 +71,7 @@ def run_python(code):
     # Remove the main.py file after execution
     os.remove('main.py')
 
-    return exit_code, stdout, stderr
+    return exit_code, stdout, stderr if not 'Debugger warning:' in stderr else ''
 
 def run_bash(code):
     # If the virtual environment does not exist, create it
