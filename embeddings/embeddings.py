@@ -39,7 +39,7 @@ def cosine_similarity(a, b):
     norm_b = np.linalg.norm(b)
     return dot_product / (norm_a * norm_b)
 
-def search_embeddings(key, similarity_threshold=0.7, method = "openai"):
+def search_embeddings(key, similarity_threshold=0.8, method = "openai"):
     redis_conn = redis.Redis(host='localhost', port=6379, db=0)
     search_embedding = get_embeddings(key, method)
     search_results = []
