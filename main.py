@@ -6,10 +6,12 @@ from quart import request, jsonify, send_from_directory
 from quart_redis import RedisHandler, get_redis
 import os
 import subprocess
+import logging
 
 memories = {}
 
 app = quart_cors.cors(quart.Quart(__name__), allow_origin="https://chat.openai.com")
+app.logger.setLevel(logging.DEBUG)
 app.config['REDIS_URI'] = 'redis://localhost:6379/0'
 r = RedisHandler(app)
 
@@ -71,7 +73,7 @@ def run_python(code):
     # Remove the main.py file after execution
     os.remove('main.py')
 
-    return exit_code, stdout, stderr if not 'Debugger warning:' in stderr else ''
+    return exit_code, stdout, stderr #if not 'Debugger warning:' in stderr else ''
 
 def run_bash(code):
     # If the virtual environment does not exist, create it
