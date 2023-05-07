@@ -90,10 +90,10 @@ components:
           description: The script process exit code - zero is no error
         stdout:
           type: string
-          description: The stdout from the process  
+          description: The stdout from the script process - scripts output data this way  
         stderr:
           type: string
-          description: The stderr from the process
+          description: The stderr from the script process - scripts reports errors this way
     createMemoryRequest:
       type: object
       properties:

@@ -1,7 +1,7 @@
 
 import quart
 import quart_cors
-from quart import request, jsonify
+from quart import request, jsonify, send_from_directory
 import contextlib
 import io
 import os
@@ -10,6 +10,11 @@ import subprocess
 memories = {}
 
 app = quart_cors.cors(quart.Quart(__name__), allow_origin="https://chat.openai.com")
+
+@app.route('/pub/<path:filename>')
+async def serve_static_file(filename):
+    static_folder = '/tmp'
+    return await send_from_directory(static_folder, filename, conditional=True)
 
 @app.route('/memories', methods=['POST'])
 async def create_memory():
