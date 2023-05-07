@@ -23,7 +23,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/runScriptResponse'
-  /memories:
+  /memories/create:
     post:
       operationId: create_memory
       summary: Create a memory
@@ -40,37 +40,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/createMemoryResponse'
-        "409":
-          description: Memory with this id already exists
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+        "415":
+          description: Unsupported media type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+  /memories/list:
     get:
       operationId: list_memories
       summary: List memories
       responses:
         "200":
-          description: List of memory ids
+          description: Memories list
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/listMemoriesResponse'
-  /memories/{memory_id}:
-    get:
+  /memories/search:
+    post:
       operationId: get_memory
-      summary: Get a memory
-      parameters:
-        - in: path
-          name: memory_id
-          required: true
-          schema:
-            type: string
+      summary: Search for a memory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/searchMemoryRequest'
       responses:
         "200":
-          description: Memory details
+          description: Memory search results
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/getMemoryResponse'
+                $ref: '#/components/schemas/searchMemoryResponse'
         "404":
           description: Memory not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+        "415":
+          description: Unsupported media type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
 components:
   schemas:
     runScriptRequest:
@@ -97,29 +118,40 @@ components:
     createMemoryRequest:
       type: object
       properties:
-        id:
+        description:
           type: string
-          description: The id of the memory
+          description: A unique identifier for the memory
         text:
           type: string
-          description: The text of the memory
+          description: The text content of the memory
     createMemoryResponse:
       type: object
       properties:
-        id:
+        description:
           type: string
-          description: The id of the created memory
+          description: A unique identifier for the created memory
     listMemoriesResponse:
       type: array
       items:
         type: string
-      description: An array of memory ids
-    getMemoryResponse:
+      description: A list of memory descriptions
+    searchMemoryRequest:
       type: object
       properties:
-        id:
+        description:
           type: string
-          description: The id of the memory
-        text:
+          description: A unique identifier for the memory to be searched
+    searchMemoryResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+          description: An array of search results
+    errorResponse:
+      type: object
+      properties:
+        error:
           type: string
-          description: The text of the memory
+          description: The error message

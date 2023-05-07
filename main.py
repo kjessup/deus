@@ -7,48 +7,42 @@ from quart_redis import RedisHandler, get_redis
 import os
 import subprocess
 import logging
-
-memories = {}
+from embeddings.embeddings import put_embedding, search_embeddings
 
 app = quart_cors.cors(quart.Quart(__name__), allow_origin="https://chat.openai.com")
 app.logger.setLevel(logging.DEBUG)
 app.config['REDIS_URI'] = 'redis://localhost:6379/0'
 r = RedisHandler(app)
 
-@app.route('/pub/<path:filename>')
-async def serve_static_file(filename):
-    static_folder = './pub'
-    return await send_from_directory(static_folder, filename, conditional=True)
-
-@app.route('/memories', methods=['POST'])
+@app.route('/memories/create', methods=['POST'])
 async def create_memory():
     if request.content_type != 'application/json':
         return jsonify({'error': 'Only application/json content type is supported'}), 415
     data = await request.get_json()
-    memory_id = data.get('id')
+    memory_id = data.get('description')
     text = data.get('text')
     if not memory_id or not text:
-        return jsonify({'error': 'Both "id" and "text" fields are required'}), 400
-    redis = get_redis()
-    if await redis.exists(memory_id):
-        return jsonify({'error': 'Memory with this id already exists'}), 409
-    await redis.set(memory_id, text)
-    return jsonify({'id': memory_id}), 201
+        return jsonify({'error': 'Both "description" and "text" fields are required'}), 400
+    put_embedding(memory_id, text)
+    return jsonify({'description': memory_id}), 201
 
-@app.route('/memories', methods=['GET'])
+@app.route('/memories/list', methods=['GET'])
 async def list_memories():
     redis = get_redis()
-    keys = await redis.keys('*')
-    keys_str = [key.decode('utf-8') for key in keys]
+    keys = await redis.keys('*:embedding:*')
+    keys_str = [key.split(':')[0] for key in [key.decode('utf-8') for key in keys]]
     return jsonify(keys_str), 200
 
-@app.route('/memories/<memory_id>', methods=['GET'])
-async def get_memory(memory_id):
-    redis = get_redis()
-    memory = await redis.get(memory_id)
-    if not memory:
+@app.route('/memories/search', methods=['POST'])
+async def get_memory():
+    if request.content_type != 'application/json':
+        return jsonify({'error': 'Only application/json content type is supported'}), 415
+    data = await request.get_json()
+    memory_id = data.get('description')
+    results = search_embeddings(memory_id)
+    if not results:
         return jsonify({'error': 'Memory not found'}), 404
-    return jsonify({'id': memory_id, 'text': memory.decode('utf-8')}), 200
+    return jsonify({'results': results}), 200
 
 def create_virtual_environment():
     venv_path = './venv'
@@ -163,6 +157,11 @@ async def openapi_spec():
     with open("openapi.yaml") as f:
         text = f.read()
         return quart.Response(text, mimetype="text/yaml")
+
+@app.route('/pub/<path:filename>')
+async def serve_static_file(filename):
+    static_folder = './pub'
+    return await send_from_directory(static_folder, filename, conditional=True)
 
 def main():
     app.run(debug=False, host="0.0.0.0", port=5004)
