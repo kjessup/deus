@@ -1,93 +1,125 @@
 openapi: 3.0.1
 info:
-  title: TODO Plugin
-  description: A plugin that allows the user to create and manage a TODO list using ChatGPT. If you do not know the user's username, ask them first before making queries to the plugin. Otherwise, use the username "global".
+  title: Deus
+  description: A plugin that runs local scripts and manages memories.
   version: 'v1'
 servers:
-  - url: http://localhost:5003
+  - url: http://localhost:5004
 paths:
-  /todos/{username}:
-    get:
-      operationId: getTodos
-      summary: Get the list of todos
-      parameters:
-      - in: path
-        name: username
-        schema:
-            type: string
+  /run_script:
+    post:
+      operationId: run_script
+      summary: Run a script
+      requestBody:
         required: true
-        description: The name of the user.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/runScriptRequest'
       responses:
         "200":
-          description: OK
+          description: Script run
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/getTodosResponse'
+                $ref: '#/components/schemas/runScriptResponse'
+  /memories:
     post:
-      operationId: addTodo
-      summary: Add a todo to the list
-      parameters:
-      - in: path
-        name: username
-        schema:
-            type: string
-        required: true
-        description: The name of the user.
+      operationId: create_memory
+      summary: Create a memory
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/addTodoRequest'
+              $ref: '#/components/schemas/createMemoryRequest'
+      responses:
+        "201":
+          description: Memory created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/createMemoryResponse'
+        "409":
+          description: Memory with this id already exists
+    get:
+      operationId: list_memories
+      summary: List memories
       responses:
         "200":
-          description: OK
-    delete:
-      operationId: deleteTodo
-      summary: Delete a todo from the list
+          description: List of memory ids
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/listMemoriesResponse'
+  /memories/{memory_id}:
+    get:
+      operationId: get_memory
+      summary: Get a memory
       parameters:
-      - in: path
-        name: username
-        schema:
+        - in: path
+          name: memory_id
+          required: true
+          schema:
             type: string
-        required: true
-        description: The name of the user.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/deleteTodoRequest'
       responses:
         "200":
-          description: OK
-
+          description: Memory details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/getMemoryResponse'
+        "404":
+          description: Memory not found
 components:
   schemas:
-    getTodosResponse:
+    runScriptRequest:
       type: object
       properties:
-        todos:
-          type: array
-          items:
-            type: string
-          description: The list of todos.
-    addTodoRequest:
-      type: object
-      required:
-      - todo
-      properties:
-        todo:
+        language:
           type: string
-          description: The todo to add to the list.
-          required: true
-    deleteTodoRequest:
+          description: The script language
+        code:
+          type: string
+          description: The script code which has line endings properly escaped for JSON
+    runScriptResponse:
       type: object
-      required:
-      - todo_idx
       properties:
-        todo_idx:
+        exitCode:
           type: integer
-          description: The index of the todo to delete.
-          required: true
+          description: The script process exit code - zero is no error
+        stdout:
+          type: string
+          description: The stdout from the process  
+        stderr:
+          type: string
+          description: The stderr from the process
+    createMemoryRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The id of the memory
+        text:
+          type: string
+          description: The text of the memory
+    createMemoryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The id of the created memory
+    listMemoriesResponse:
+      type: array
+      items:
+        type: string
+      description: An array of memory ids
+    getMemoryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The id of the memory
+        text:
+          type: string
+          description: The text of the memory
